@@ -10,35 +10,32 @@ from telegram.ext import (
     ConversationHandler
 )
 import requests
-# === ایمپورت کتابخانه برای خواندن فایل .env ===
 from dotenv import load_dotenv
 import os
 
 from pathlib import Path
 
-# ساخت مسیر کامل به فایل .env کنار فایل فعلی
 env_path = Path(__file__).parent / ".env"
 load_dotenv(dotenv_path=env_path)
 print(f"✅ در حال خواندن فایل .env از: {env_path}")
 
-# === خواندن مقادیر محرمانه از محیط ===
-BOT_TOKEN = os.getenv("BOT_TOKEN")  # مقدار "BOT_TOKEN" از فایل .env خوانده می‌شود
+
+BOT_TOKEN = os.getenv("BOT_TOKEN")
 COINGECKO_API_KEY = os.getenv("COINGECKO_API_KEY")
 CHANNEL_USERNAME = os.getenv("CHANNEL_USERNAME")
 
-# === بررسی که حتما مقادیر خوانده شده‌اند (اختیاری ولی توصیه شده) ===
 if not all([BOT_TOKEN, COINGECKO_API_KEY, CHANNEL_USERNAME]):
     raise ValueError("❌ یک یا چند متغیر ضروری در فایل .env تعریف نشده‌اند.")
 COMPARING = 1
 
-# تنظیمات لاگ
+
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     level=logging.INFO
 )
 logger = logging.getLogger(__name__)
 
-# ==================== توابع کمکی ====================
+
 async def is_user_member(user_id: int, context: ContextTypes.DEFAULT_TYPE) -> bool:
     """بررسی عضویت کاربر در کانال اجباری."""
     try:
@@ -72,7 +69,7 @@ def get_crypto_price(coin_id="bitcoin"):
         logger.error(f"خطا در دریافت قیمت {coin_id}: {e}")
         return None
 
-# ==================== مدیریت مکالمه مقایسه ====================
+
 async def price_compare_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """شروع فرآیند مقایسه - مرحله اول."""
     query = update.callback_query
@@ -88,19 +85,19 @@ async def price_compare_menu(update: Update, context: ContextTypes.DEFAULT_TYPE)
         parse_mode="Markdown"
     )
     
-    # ورود به حالت مقایسه
+
     return COMPARING
 
 async def compare_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """پردازش ورودی کاربر در حالت مقایسه - مرحله دوم."""
     user_input = update.message.text.strip().lower()
     
-    # بررسی لغو
+    
     if user_input == "/cancel":
         await update.message.reply_text("✅ عملیات مقایسه لغو شد.")
         return ConversationHandler.END
     
-    # تجزیه ورودی کاربر
+    
     parts = user_input.split()
     
     if len(parts) < 2:
@@ -110,17 +107,17 @@ async def compare_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "برای لغو: /cancel",
             parse_mode="Markdown"
         )
-        return COMPARING  # همچنان در حالت مقایسه باقی بمان
+        return COMPARING  
     
     coin1, coin2 = parts[0], parts[1]
     
-    # دریافت قیمت‌ها
+      
     await update.message.reply_text("⏳ در حال دریافت قیمت‌ها...")
     
     price1 = get_crypto_price(coin1)
     price2 = get_crypto_price(coin2)
     
-    # بررسی نتایج
+      
     if price1 is None or price2 is None:
         error_msg = "❌ دریافت قیمت برای ارز(های) زیر ناموفق بود:\n"
         if price1 is None:
@@ -132,7 +129,7 @@ async def compare_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(error_msg, parse_mode="Markdown")
         return COMPARING
     
-    # محاسبه و نمایش نتیجه
+    
     ratio = price1 / price2 if price2 != 0 else 0
     
     message = (
@@ -153,7 +150,7 @@ async def compare_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     await update.message.reply_text(message, parse_mode="Markdown", reply_markup=reply_markup)
     
-    # خروج از حالت مکالمه
+    
     return ConversationHandler.END
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -161,7 +158,7 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("✅ عملیات کنونی لغو شد.")
     return ConversationHandler.END
 
-# ==================== دستورات اصلی ربات ====================
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """دستور /start - اولین تعامل کاربر."""
     user_id = update.effective_user.id
@@ -183,7 +180,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
     
-    # نمایش منوی اصلی
     await show_main_menu(update, context)
 
 async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -354,7 +350,6 @@ async def handle_search_request(update: Update, context: ContextTypes.DEFAULT_TY
         parse_mode="Markdown"
     )
     
-    # ذخیره وضعیت برای دریافت ورودی بعدی
     context.user_data["awaiting_coin_search"] = True
 
 async def handle_coin_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -385,10 +380,9 @@ async def handle_coin_search(update: Update, context: ContextTypes.DEFAULT_TYPE)
             parse_mode="Markdown"
         )
     
-    # پاک کردن وضعیت جستجو
     context.user_data["awaiting_coin_search"] = False
 
-# ==================== مدیریت دکمه‌ها ====================
+  
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """مدیریت کلیک روی دکمه‌های اینلاین."""
     query = update.callback_query
@@ -396,7 +390,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     logger.info(f"دکمه کلیک شده: {callback_data}")
     
-    # مسیریابی بر اساس callback_data
+    
     if callback_data == "check_membership":
         await check_membership(update, context)
     elif callback_data == "price_single":
@@ -412,7 +406,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif callback_data.startswith("price_"):
         await show_coin_price(update, context)
     elif callback_data.startswith("compare_"):
-        # شروع مقایسه با یک ارز از پیش انتخاب شده
         base_coin = callback_data.replace("compare_", "")
         context.user_data["base_coin"] = base_coin
         await query.edit_message_text(
@@ -424,13 +417,11 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         context.user_data["awaiting_compare_coin"] = True
 
-# ==================== تابع اصلی ====================
+
 def main():
     """تابع اصلی اجرای ربات."""
-    # ساخت اپلیکیشن
     application = Application.builder().token(BOT_TOKEN).build()
     
-    # ثبت هندلر مکالمه برای مقایسه
     conv_handler = ConversationHandler(
         entry_points=[CallbackQueryHandler(price_compare_menu, pattern="^price_compare$")],
         states={
@@ -441,7 +432,6 @@ def main():
         fallbacks=[CommandHandler("cancel", cancel)],
     )
     
-    # ثبت هندلرها
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("cancel", cancel))
@@ -449,13 +439,11 @@ def main():
     application.add_handler(conv_handler)
     application.add_handler(CallbackQueryHandler(button_handler))
     
-    # هندلر برای جستجوی ارز
     application.add_handler(MessageHandler(
         filters.TEXT & ~filters.COMMAND,
         handle_coin_search
     ))
     
-    # شروع ربات
     print("=" * 50)
     print("🤖 ربات قیمت‌یاب ارز دیجیتال فعال شد")
     print("📞 برای خروج: Ctrl + C")
